@@ -66,6 +66,20 @@ export function PetProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      
+      // Если пользователь есть, но нет профиля — возможно, email не подтверждён
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        if (!profile) {
+          console.log('Email not confirmed yet or profile not created')
+          // Можно показать сообщение "Подтвердите email"
+        }
+      }
     } catch (error) {
       console.error('Error loading user:', error)
     } finally {

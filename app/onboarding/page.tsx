@@ -11,10 +11,12 @@ export default function OnboardingPage() {
   const supabase = createClient()
   const [petName, setPetName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
       const { data: userData } = await supabase.auth.getUser()
@@ -29,9 +31,15 @@ export default function OnboardingPage() {
 
       if (error) throw error
 
+      // Даем время на обновление контекста
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       router.push('/')
+
+      
     } catch (error) {
       console.error('Error creating pet:', error)
+      setError('Не удалось создать питомца. Попробуйте ещё раз.')
     } finally {
       setLoading(false)
     }
@@ -61,6 +69,12 @@ export default function OnboardingPage() {
             className="bg-white/50 border-white/60 text-center text-lg py-6"
             autoFocus
           />
+
+          {error && (
+            <div className="p-3 bg-destructive/20 text-destructive-foreground rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
           <Button
             type="submit"

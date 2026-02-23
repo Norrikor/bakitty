@@ -6,10 +6,32 @@ import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { ActionGrid } from '@/components/pets/ActionGrid'
 import { Trash2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function HomePage() {
   const router = useRouter()
+  const supabase = createClient()
   const {  currentPet, loading, hasPets, userName, todayActions, deleteAction } = usePets()
+  const { user, userLoading } = usePets()
+
+
+    useEffect(() => {
+    if (!userLoading && user) {
+      // Проверяем, есть ли профиль
+      const checkProfile = async () => {
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single()
+        
+        if (!data) {
+          router.push('/confirm-email')
+        }
+      }
+      checkProfile()
+    }
+  }, [user, userLoading, router])
 
   // Если загрузка закончилась и нет питомцев — редирект на онбординг
   useEffect(() => {
