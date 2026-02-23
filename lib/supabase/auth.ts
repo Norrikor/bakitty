@@ -27,17 +27,18 @@ export async function signUp(email: string, password: string, name: string) {
     return { data: null, error: authError }
   }
 
-  // Создаем запись в таблице profiles
+  // Сохраняем в user_profiles
   if (authData.user) {
     const { error: profileError } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .insert({
         id: authData.user.id,
         name: name,
+        email: email,
       })
 
     if (profileError) {
-      console.error('Error creating profile:', profileError)
+      console.error('Error creating user profile:', profileError)
     }
   }
 

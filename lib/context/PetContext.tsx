@@ -73,8 +73,20 @@ export function PetProvider({ children }: { children: ReactNode }) {
   const refreshPets = useCallback(async () => {
     setLoading(true)
     try {
-      const { data: userData } = await supabase.auth.getUser()
-      if (!userData.user) return
+      // Добавляем небольшую задержку
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      
+      if (userError) {
+        console.error('Error getting user:', userError)
+        return
+      }
+      
+      if (!userData.user) {
+        console.log('No user found')
+        return
+      }
 
       // Получаем питомцев, где пользователь owner
       const { data: ownedPets, error: ownedError } = await supabase
@@ -127,59 +139,45 @@ export function PetProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase])
 
-  // Загрузка действий за сегодня - упрощенная версия без джойнов
+  // Загрузка действий за сегодня
   const loadTodayActions = useCallback(async (petId: string) => {
     try {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       
-      // Получаем действия
-      const { data: actions, error: actionsError } = await supabase
+      // Получаем действия с шаблонами
+      const { data: actions, error } = await supabase
         .from('actions')
-        .select('*')
+        .select(`
+          *,
+          action_templates:template_id (name, icon)
+        `)
         .eq('pet_id', petId)
         .gte('timestamp', today.toISOString())
         .order('timestamp', { ascending: false })
 
-      if (actionsError) throw actionsError
+      if (error) throw error
 
       if (!actions || actions.length === 0) {
         setTodayActions([])
         return
       }
 
-      // Получаем имена пользователей
-      const userIds = actions.map(a => a.user_id)
-      const { data: users } = await supabase.auth.admin.listUsers()
-      const userMap = new Map(
-        users?.users
-          .filter(u => userIds.includes(u.id))
-          .map(u => [u.id, u.user_metadata?.name || u.email])
-      )
+      // Получаем всех уникальных пользователей
+      const userIds = [...new Set(actions.map(a => a.user_id))]
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, name')
+        .in('id', userIds)
 
-      // Получаем шаблоны
-      const templateIds = actions
-        .map(a => a.template_id)
-        .filter(id => id !== null)
-      
-      let templatesMap = new Map()
-      if (templateIds.length > 0) {
-        const { data: templates } = await supabase
-          .from('action_templates')
-          .select('id, name, icon')
-          .in('id', templateIds)
-        
-        templatesMap = new Map(
-          (templates || []).map(t => [t.id, t])
-        )
-      }
+      const userMap = new Map(profiles?.map(p => [p.id, p.name]) || [])
 
       // Склеиваем данные
       const actionsWithDetails = actions.map(action => ({
         ...action,
         user_name: userMap.get(action.user_id) || 'Неизвестно',
-        template_name: templatesMap.get(action.template_id)?.name,
-        template_icon: templatesMap.get(action.template_id)?.icon
+        template_name: action.action_templates?.name,
+        template_icon: action.action_templates?.icon
       }))
 
       setTodayActions(actionsWithDetails)

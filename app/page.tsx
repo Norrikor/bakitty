@@ -3,10 +3,12 @@
 import { usePets } from '@/lib/context/PetContext'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Header } from '@/components/layout/Header'
+import { ActionGrid } from '@/components/pets/ActionGrid'
 
 export default function HomePage() {
   const router = useRouter()
-  const { pets, currentPet, setCurrentPet, loading, hasPets, userName } = usePets()
+  const { pets, currentPet, loading, hasPets, userName, todayActions } = usePets()
 
   // Если загрузка закончилась и нет питомцев — редирект на онбординг
   useEffect(() => {
@@ -31,28 +33,53 @@ export default function HomePage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-heading">
-        Привет, {userName}! 👋
-      </h1>
-      <p className="text-muted-foreground">
-        Сегодня заботимся о {currentPet?.name || 'питомце'}
-      </p>
-      
-      {/* Временный список питомцев */}
-      <div className="mt-8 space-y-2">
-        {pets.map(pet => (
-          <div 
-            key={pet.id}
-            className={`p-4 rounded-lg watercolor-card cursor-pointer transition-all ${
-              currentPet?.id === pet.id ? 'ring-2 ring-primary' : ''
-            }`}
-            onClick={() => setCurrentPet(pet)}
-          >
-            <p className="font-heading text-lg">{pet.name}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <>
+      <Header />
+      <main className="container mx-auto px-4 py-6 max-w-lg">
+        {/* Приветствие */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-heading">
+            Привет, {userName}! 👋
+          </h1>
+          <p className="text-muted-foreground">
+            Сегодня заботимся о {currentPet?.name}
+          </p>
+        </div>
+
+        {/* Сетка действий */}
+        <section className="mb-8">
+          <h2 className="text-lg font-heading mb-3">Что делаем?</h2>
+          <ActionGrid />
+        </section>
+
+        {/* Лента сегодня (временная) */}
+        <section>
+          <h2 className="text-lg font-heading mb-3">Сегодня</h2>
+          {todayActions.length === 0 ? (
+            <div className="text-center py-8 watercolor-card rounded-lg">
+              <span className="text-4xl mb-2 block">😴</span>
+              <p className="text-muted-foreground">Пока тишина...</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {todayActions.map((action) => (
+                <div
+                  key={action.id}
+                  className="watercolor-card p-3 flex items-center gap-3"
+                >
+                  <span className="text-2xl">{action.template_icon || '📝'}</span>
+                  <div className="flex-1">
+                    <p className="font-medium">{action.template_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {action.user_name} • {new Date(action.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </>
   )
 }
