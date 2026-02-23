@@ -5,10 +5,11 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { ActionGrid } from '@/components/pets/ActionGrid'
+import { Trash2 } from 'lucide-react'
 
 export default function HomePage() {
   const router = useRouter()
-  const { pets, currentPet, loading, hasPets, userName, todayActions } = usePets()
+  const {  currentPet, loading, hasPets, userName, todayActions, deleteAction } = usePets()
 
   // Если загрузка закончилась и нет питомцев — редирект на онбординг
   useEffect(() => {
@@ -65,7 +66,7 @@ export default function HomePage() {
               {todayActions.map((action) => (
                 <div
                   key={action.id}
-                  className="watercolor-card p-3 flex items-center gap-3"
+                  className="watercolor-card p-3 flex items-center gap-3 group relative"
                 >
                   <span className="text-2xl">{action.template_icon || '📝'}</span>
                   <div className="flex-1">
@@ -74,6 +75,18 @@ export default function HomePage() {
                       {action.user_name} • {new Date(action.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
+                  
+                  {/* Кнопка удаления действия */}
+                  <button
+                    onClick={() => {
+                      if (confirm('Удалить это действие?')) {
+                        deleteAction(action.id)
+                      }
+                    }}
+                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>

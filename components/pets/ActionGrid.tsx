@@ -1,8 +1,8 @@
 'use client'
 
 import { usePets } from '@/lib/context/PetContext'
-import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { ActionCard } from './ActionCard'
+
 import { useState } from 'react'
 import {
   Dialog,
@@ -11,17 +11,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
-// Популярные эмодзи для быстрого выбора
 const POPULAR_EMOJIS = ['🍗', '💊', '🚽', '🛁', '🎾', '😴', '💧', '🍖', '🥫', '🦴', '🐟', '🥛']
 
 export function ActionGrid() {
-  const { templates, currentPet, addAction, refreshCurrentPetData } = usePets()
+  const { templates, currentPet, refreshCurrentPetData } = usePets()
   const [open, setOpen] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
   const [selectedEmoji, setSelectedEmoji] = useState('🍗')
@@ -64,15 +63,9 @@ export function ActionGrid() {
     <div className="space-y-4">
       {/* Сетка действий */}
       <div className="grid grid-cols-2 gap-3">
+        {/* ВОТ ТУТ МЫ ИСПОЛЬЗУЕМ ActionCard */}
         {templates.map((template) => (
-          <button
-            key={template.id}
-            onClick={() => addAction(template.id)}
-            className="watercolor-card p-4 flex flex-col items-center gap-2 hover:scale-105 transition-all active:scale-95 cursor-pointer group"
-          >
-            <span className="text-3xl group-hover:animate-bounce">{template.icon}</span>
-            <span className="text-sm font-medium text-center">{template.name}</span>
-          </button>
+          <ActionCard key={template.id} template={template} />
         ))}
 
         {/* Кнопка добавления нового шаблона */}
@@ -85,7 +78,7 @@ export function ActionGrid() {
         </button>
       </div>
 
-      {/* Модалка создания шаблона */}
+      {/* Модалка создания шаблона (без изменений) */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="watercolor-card border-white/30 sm:max-w-md">
           <DialogHeader>
@@ -98,7 +91,6 @@ export function ActionGrid() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Выбор эмодзи */}
             <div className="space-y-2">
               <Label htmlFor="emoji">Иконка</Label>
               <div className="grid grid-cols-6 gap-2">
@@ -119,7 +111,6 @@ export function ActionGrid() {
               </div>
             </div>
 
-            {/* Название действия */}
             <div className="space-y-2">
               <Label htmlFor="name">Название</Label>
               <Input

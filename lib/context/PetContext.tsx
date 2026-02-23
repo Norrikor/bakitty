@@ -28,6 +28,10 @@ type PetContextType = {
   // Действия
   addAction: (templateId: string) => Promise<void>
   
+  // функции удаления
+  deleteAction: (actionId: string) => Promise<void>
+  deleteTemplate: (templateId: string) => Promise<void>
+  
   // Обновление данных
   refreshPets: () => Promise<void>
   refreshCurrentPetData: () => Promise<void>
@@ -46,7 +50,7 @@ export function PetProvider({ children }: { children: ReactNode }) {
   const [currentPet, setCurrentPet] = useState<Pet | null>(null)
   const [loading, setLoading] = useState(true)
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [user, setUser] = useState<any | null>(null)
   const [userLoading, setUserLoading] = useState(true)
   
@@ -73,7 +77,6 @@ export function PetProvider({ children }: { children: ReactNode }) {
   const refreshPets = useCallback(async () => {
     setLoading(true)
     try {
-      // Добавляем небольшую задержку
       await new Promise(resolve => setTimeout(resolve, 100))
       
       const { data: userData, error: userError } = await supabase.auth.getUser()
@@ -88,7 +91,6 @@ export function PetProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      // Получаем питомцев, где пользователь owner
       const { data: ownedPets, error: ownedError } = await supabase
         .from('pets')
         .select('*')
@@ -96,7 +98,6 @@ export function PetProvider({ children }: { children: ReactNode }) {
 
       if (ownedError) throw ownedError
 
-      // Получаем питомцев, где пользователь member (через family_members)
       const { data: memberPets, error: memberError } = await supabase
         .from('family_members')
         .select('pet_id, pets(*)')
@@ -109,7 +110,6 @@ export function PetProvider({ children }: { children: ReactNode }) {
         .map(m => m.pets)
         .filter((pet): pet is NonNullable<typeof pet> => pet !== null)
 
-      // Объединяем и убираем дубликаты
       const allPets = [...(ownedPets || []), ...memberPetsList]
       const uniquePets = allPets.filter((pet, index, self) => 
         index === self.findIndex(p => p.id === pet.id)
@@ -145,7 +145,6 @@ export function PetProvider({ children }: { children: ReactNode }) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       
-      // Получаем действия с шаблонами
       const { data: actions, error } = await supabase
         .from('actions')
         .select(`
@@ -163,7 +162,6 @@ export function PetProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      // Получаем всех уникальных пользователей
       const userIds = [...new Set(actions.map(a => a.user_id))]
       const { data: profiles } = await supabase
         .from('user_profiles')
@@ -172,7 +170,6 @@ export function PetProvider({ children }: { children: ReactNode }) {
 
       const userMap = new Map(profiles?.map(p => [p.id, p.name]) || [])
 
-      // Склеиваем данные
       const actionsWithDetails = actions.map(action => ({
         ...action,
         user_name: userMap.get(action.user_id) || 'Неизвестно',
@@ -205,12 +202,50 @@ export function PetProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
-      // Обновляем ленту
       await loadTodayActions(currentPet.id)
     } catch (error) {
       console.error('Error adding action:', error)
     }
   }, [currentPet, supabase, loadTodayActions])
+
+  // Удалить действие
+  const deleteAction = useCallback(async (actionId: string) => {
+    if (!currentPet) return
+
+    try {
+      const { error } = await supabase
+        .from('actions')
+        .delete()
+        .eq('id', actionId)
+
+      if (error) throw error
+
+      // Обновляем ленту
+      await loadTodayActions(currentPet.id)
+    } catch (error) {
+      console.error('Error deleting action:', error)
+    }
+  }, [currentPet, supabase, loadTodayActions])
+
+  // Удалить шаблон
+  const deleteTemplate = useCallback(async (templateId: string) => {
+    if (!currentPet) return
+
+    try {
+      const { error } = await supabase
+        .from('action_templates')
+        .delete()
+        .eq('id', templateId)
+
+      if (error) throw error
+
+      // Обновляем шаблоны и ленту
+      await loadTemplates(currentPet.id)
+      await loadTodayActions(currentPet.id)
+    } catch (error) {
+      console.error('Error deleting template:', error)
+    }
+  }, [currentPet, supabase, loadTemplates, loadTodayActions])
 
   // Обновить данные текущего питомца
   const refreshCurrentPetData = useCallback(async () => {
@@ -263,6 +298,8 @@ export function PetProvider({ children }: { children: ReactNode }) {
       todayActions,
       loadTodayActions,
       addAction,
+      deleteAction,
+      deleteTemplate,
       refreshPets,
       refreshCurrentPetData,
       refreshUser,
